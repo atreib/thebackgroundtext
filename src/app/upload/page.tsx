@@ -1,82 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { removeBackground } from "@imgly/background-removal";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-
-function extractBackgroundFromOriginalAndForeground(
-  originalImageUrl: string,
-  foregroundImageUrl: string
-): Promise<string> {
-  return new Promise((resolve) => {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d")!;
-
-    const original = new window.Image();
-    const foreground = new window.Image();
-
-    original.onload = () => {
-      canvas.width = original.width;
-      canvas.height = original.height;
-      ctx.drawImage(original, 0, 0);
-
-      foreground.onload = () => {
-        // Create a temporary canvas for the foreground
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const tempCtx = tempCanvas.getContext("2d")!;
-        tempCtx.drawImage(foreground, 0, 0);
-
-        // Get foreground pixel data
-        const fgData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // Get original image data
-        const originalData = ctx.getImageData(
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-
-        // Create a map of pixels to make transparent (including margin)
-        const width = canvas.width;
-        const height = canvas.height;
-        const pixelsToMakeTransparent = new Set<number>();
-        const margin = -20; // Adjust this value to control the margin size
-
-        // First pass: identify foreground pixels
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const i = (y * width + x) * 4;
-            if (fgData.data[i + 3] > 0) {
-              // Add the pixel and its surrounding pixels within the margin
-              for (let my = -margin; my <= margin; my++) {
-                for (let mx = -margin; mx <= margin; mx++) {
-                  const ny = y + my;
-                  const nx = x + mx;
-                  if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
-                    pixelsToMakeTransparent.add((ny * width + nx) * 4);
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Second pass: apply transparency
-        for (const i of pixelsToMakeTransparent) {
-          originalData.data[i + 3] = 0;
-        }
-
-        ctx.putImageData(originalData, 0, 0);
-        resolve(canvas.toDataURL("image/png"));
-      };
-      foreground.src = foregroundImageUrl;
-    };
-    original.src = originalImageUrl;
-  });
-}
+import {
+  extractForegroundURL,
+  extractBackgroundURL,
+} from "@/libs/bg-remover/index.client";
 
 export default function UploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -87,52 +16,36 @@ export default function UploadPage() {
   const [textSize, setTextSize] = useState(64);
   const [textColor, setTextColor] = useState("#FFFFFF");
 
+  const cleanUpImages = useCallback(
+    (foregroundImage: string | null, backgroundImage: string | null) => {
+      if (foregroundImage && foregroundImage.startsWith("blob:")) {
+        URL.revokeObjectURL(foregroundImage);
+      }
+      if (backgroundImage && backgroundImage.startsWith("blob:")) {
+        URL.revokeObjectURL(backgroundImage);
+      }
+    },
+    []
+  );
+
   // Cleanup previous URLs when new image is processed
   useEffect(() => {
-    return () => {
-      if (foregroundImage && foregroundImage.startsWith("blob:")) {
-        URL.revokeObjectURL(foregroundImage);
-      }
-      if (backgroundImage && backgroundImage.startsWith("blob:")) {
-        URL.revokeObjectURL(backgroundImage);
-      }
-    };
-  }, [foregroundImage, backgroundImage]);
+    return () => cleanUpImages(foregroundImage, backgroundImage);
+  }, [cleanUpImages, foregroundImage, backgroundImage]);
 
-  const processImage = async (imageData: string) => {
+  const processImage = async (originalImageUrl: string) => {
     setIsProcessing(true);
     try {
-      // Cleanup previous URLs
-      if (foregroundImage && foregroundImage.startsWith("blob:")) {
-        URL.revokeObjectURL(foregroundImage);
-      }
-      if (backgroundImage && backgroundImage.startsWith("blob:")) {
-        URL.revokeObjectURL(backgroundImage);
-      }
+      cleanUpImages(foregroundImage, backgroundImage);
 
-      // Process foreground (subject)
-      const foregroundConfig = {
-        output: {
-          format: "image/png" as const,
-          quality: 0.8,
-        },
-      };
-      const foregroundBlob = await removeBackground(
-        imageData,
-        foregroundConfig
-      );
-      const foregroundUrl = URL.createObjectURL(foregroundBlob);
-      setForegroundImage(foregroundUrl);
+      const foregroundImageUrl = await extractForegroundURL(originalImageUrl);
+      setForegroundImage(foregroundImageUrl);
 
-      // Extract background by subtracting foreground from original
-      const backgroundUrl = await extractBackgroundFromOriginalAndForeground(
-        imageData,
-        foregroundUrl
-      );
+      const backgroundUrl = await extractBackgroundURL({
+        originalImageUrl,
+        foregroundImageUrl,
+      });
       setBackgroundImage(backgroundUrl);
-
-      // Remove the URL revocation since we need to keep using the URLs
-      // URL.revokeObjectURL(foregroundUrl);
     } catch (error) {
       console.error("Error processing image:", error);
     } finally {
