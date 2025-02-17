@@ -4,6 +4,60 @@ import { useState } from "react";
 import { removeBackground } from "@imgly/background-removal";
 import Image from "next/image";
 
+function extractBackgroundFromOriginalAndForeground(
+  originalImageUrl: string,
+  foregroundImageUrl: string
+): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d")!;
+
+    const original = new window.Image();
+    const foreground = new window.Image();
+
+    original.onload = () => {
+      canvas.width = original.width;
+      canvas.height = original.height;
+      ctx.drawImage(original, 0, 0);
+
+      foreground.onload = () => {
+        // Create a temporary canvas for the foreground
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext("2d")!;
+        tempCtx.drawImage(foreground, 0, 0);
+
+        // Get foreground pixel data
+        const fgData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Get original image data
+        const originalData = ctx.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        // Create background by keeping original pixels and making the subject area transparent
+        for (let i = 0; i < originalData.data.length; i += 4) {
+          // If the pixel in foreground has any opacity (part of the subject)
+          if (fgData.data[i + 3] > 0) {
+            // This pixel is part of the subject in foreground, so make it transparent in background
+            originalData.data[i + 3] = 0;
+          }
+          // Otherwise, keep the original pixel (it's part of the background)
+        }
+
+        ctx.putImageData(originalData, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      foreground.src = foregroundImageUrl;
+    };
+    original.src = originalImageUrl;
+  });
+}
+
 export default function UploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [foregroundImage, setForegroundImage] = useState<string | null>(null);
@@ -27,19 +81,15 @@ export default function UploadPage() {
       const foregroundUrl = URL.createObjectURL(foregroundBlob);
       setForegroundImage(foregroundUrl);
 
-      // Process background
-      const backgroundConfig = {
-        output: {
-          format: "image/png" as const,
-          quality: 0.8,
-        },
-      };
-      const backgroundBlob = await removeBackground(
+      // Extract background by subtracting foreground from original
+      const backgroundUrl = await extractBackgroundFromOriginalAndForeground(
         imageData,
-        backgroundConfig
+        foregroundUrl
       );
-      const backgroundUrl = URL.createObjectURL(backgroundBlob);
       setBackgroundImage(backgroundUrl);
+
+      // Clean up the temporary blob URL
+      URL.revokeObjectURL(foregroundUrl);
     } catch (error) {
       console.error("Error processing image:", error);
     } finally {
