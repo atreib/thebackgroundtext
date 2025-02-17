@@ -39,14 +39,34 @@ function extractBackgroundFromOriginalAndForeground(
           canvas.height
         );
 
-        // Create background by keeping original pixels and making the subject area transparent
-        for (let i = 0; i < originalData.data.length; i += 4) {
-          // If the pixel in foreground has any opacity (part of the subject)
-          if (fgData.data[i + 3] > 0) {
-            // This pixel is part of the subject in foreground, so make it transparent in background
-            originalData.data[i + 3] = 0;
+        // Create a map of pixels to make transparent (including margin)
+        const width = canvas.width;
+        const height = canvas.height;
+        const pixelsToMakeTransparent = new Set<number>();
+        const margin = -20; // Adjust this value to control the margin size
+
+        // First pass: identify foreground pixels
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            if (fgData.data[i + 3] > 0) {
+              // Add the pixel and its surrounding pixels within the margin
+              for (let my = -margin; my <= margin; my++) {
+                for (let mx = -margin; mx <= margin; mx++) {
+                  const ny = y + my;
+                  const nx = x + mx;
+                  if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                    pixelsToMakeTransparent.add((ny * width + nx) * 4);
+                  }
+                }
+              }
+            }
           }
-          // Otherwise, keep the original pixel (it's part of the background)
+        }
+
+        // Second pass: apply transparency
+        for (const i of pixelsToMakeTransparent) {
+          originalData.data[i + 3] = 0;
         }
 
         ctx.putImageData(originalData, 0, 0);
