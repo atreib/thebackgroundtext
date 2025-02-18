@@ -112,6 +112,12 @@ export default function UploadPage() {
           </div>
         </div>
       </div>
+      <footer className="text-center text-sm text-gray-500 mt-8 py-8">
+        Built with ❤️ by{" "}
+        <a href="https://andretreib.com" target="_blank" className="underline">
+          Andre Treib
+        </a>
+      </footer>
     </div>
   );
 }

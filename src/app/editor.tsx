@@ -8,10 +8,28 @@ type Props = {
   foregroundImage: string;
 };
 
+const FONT_OPTIONS = [
+  "Arial",
+  "Times New Roman",
+  "Helvetica",
+  "Georgia",
+  "Verdana",
+  "Impact",
+];
+
 export function Editor({ originalImage, foregroundImage }: Props) {
   const [text, setText] = useState("YOUR TEXT HERE");
   const [textSize, setTextSize] = useState(64);
   const [textColor, setTextColor] = useState("#FFFFFF");
+  const [textOpacity, setTextOpacity] = useState(100);
+  const [positionX, setPositionX] = useState(50); // percentage
+  const [positionY, setPositionY] = useState(50); // percentage
+  const [fontFamily, setFontFamily] = useState("Arial");
+  const [shadowBlur, setShadowBlur] = useState(4);
+  const [shadowOffsetX, setShadowOffsetX] = useState(4);
+  const [shadowOffsetY, setShadowOffsetY] = useState(4);
+  const [shadowColor, setShadowColor] = useState("#000000");
+  const [shadowOpacity, setShadowOpacity] = useState(50);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const updateCanvas = async () => {
@@ -45,21 +63,39 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       // Draw background
       ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
-      // Draw text
-      ctx.font = `bold ${(textSize * canvas.width) / 512}px Arial`; // Scale text size relative to image width
-      ctx.fillStyle = textColor;
+      // Draw text with all customizations
+      ctx.font = `bold ${(textSize * canvas.width) / 512}px ${fontFamily}`;
+      const color =
+        textColor +
+        Math.round(textOpacity * 2.55)
+          .toString(16)
+          .padStart(2, "0"); // Convert opacity to hex
+      ctx.fillStyle = color;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.shadowColor = "rgba(0,0,0,0.5)";
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetX = 4;
-      ctx.shadowOffsetY = 4;
-      ctx.fillText(
-        text,
-        canvas.width / 2,
-        canvas.height / 2,
-        canvas.width * 0.9
-      );
+
+      // Shadow settings
+      const shadowColorHex =
+        shadowColor +
+        Math.round(shadowOpacity * 2.55)
+          .toString(16)
+          .padStart(2, "0");
+      ctx.shadowColor = shadowColorHex;
+      ctx.shadowBlur = shadowBlur;
+      ctx.shadowOffsetX = shadowOffsetX;
+      ctx.shadowOffsetY = shadowOffsetY;
+
+      // Calculate text position based on percentages
+      const x = (canvas.width * positionX) / 100;
+      const y = (canvas.height * positionY) / 100;
+
+      // Handle multiline text
+      const lines = text.split("\n");
+      const lineHeight = (textSize * canvas.width) / 512;
+      lines.forEach((line, index) => {
+        const yOffset = (index - (lines.length - 1) / 2) * lineHeight;
+        ctx.fillText(line, x, y + yOffset, canvas.width * 0.9);
+      });
 
       // Load and draw foreground
       const fgImage = await loadImage(foregroundImage);
@@ -73,13 +109,27 @@ export function Editor({ originalImage, foregroundImage }: Props) {
   useEffect(() => {
     updateCanvas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originalImage, foregroundImage, text, textSize, textColor]);
+  }, [
+    originalImage,
+    foregroundImage,
+    text,
+    textSize,
+    textColor,
+    textOpacity,
+    positionX,
+    positionY,
+    fontFamily,
+    shadowBlur,
+    shadowOffsetX,
+    shadowOffsetY,
+    shadowColor,
+    shadowOpacity,
+  ]);
 
   const downloadComposition = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Convert to blob and download
     const blob = await new Promise<Blob>((resolve) =>
       canvas.toBlob((blob) => resolve(blob!), "image/png")
     );
@@ -109,13 +159,29 @@ export function Editor({ originalImage, foregroundImage }: Props) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Text</label>
-            <input
-              type="text"
+            <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded min-h-[100px]"
+              placeholder="Enter your text here..."
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Font</label>
+            <select
+              value={fontFamily}
+              onChange={(e) => setFontFamily(e.target.value)}
+              className="w-full p-2 border rounded"
+            >
+              {FONT_OPTIONS.map((font) => (
+                <option key={font} value={font}>
+                  {font}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Text Size</label>
             <input
@@ -127,14 +193,130 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               className="w-full"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Text Color</label>
-            <input
-              type="color"
-              value={textColor}
-              onChange={(e) => setTextColor(e.target.value)}
-              className="w-full"
-            />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Text Color
+              </label>
+              <input
+                type="color"
+                value={textColor}
+                onChange={(e) => setTextColor(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Text Opacity (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={textOpacity}
+                onChange={(e) => setTextOpacity(Number(e.target.value))}
+                className="w-full p-2 border rounded"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Position X (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={positionX}
+                onChange={(e) => setPositionX(Number(e.target.value))}
+                className="w-full p-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Position Y (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={positionY}
+                onChange={(e) => setPositionY(Number(e.target.value))}
+                className="w-full p-2 border rounded"
+              />
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <h3 className="font-medium mb-2">Shadow Settings</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Shadow Color
+                </label>
+                <input
+                  type="color"
+                  value={shadowColor}
+                  onChange={(e) => setShadowColor(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Shadow Opacity (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={shadowOpacity}
+                  onChange={(e) => setShadowOpacity(Number(e.target.value))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Shadow Blur
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={shadowBlur}
+                  onChange={(e) => setShadowBlur(Number(e.target.value))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Shadow X Offset
+                </label>
+                <input
+                  type="number"
+                  min="-50"
+                  max="50"
+                  value={shadowOffsetX}
+                  onChange={(e) => setShadowOffsetX(Number(e.target.value))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Shadow Y Offset
+                </label>
+                <input
+                  type="number"
+                  min="-50"
+                  max="50"
+                  value={shadowOffsetY}
+                  onChange={(e) => setShadowOffsetY(Number(e.target.value))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
