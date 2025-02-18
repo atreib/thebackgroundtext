@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import Image from "next/image";
+import { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 type Props = {
@@ -15,7 +14,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
   const [textColor, setTextColor] = useState("#FFFFFF");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const downloadComposition = useCallback(async () => {
+  const updateCanvas = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -40,6 +39,10 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       canvas.width = bgImage.naturalWidth;
       canvas.height = bgImage.naturalHeight;
 
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw background
       ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
       // Draw text
@@ -61,23 +64,34 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       // Load and draw foreground
       const fgImage = await loadImage(foregroundImage);
       ctx.drawImage(fgImage, 0, 0, canvas.width, canvas.height);
-
-      // Convert to blob and download
-      const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((blob) => resolve(blob!), "image/png")
-      );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${uuidv4()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error creating composition:", error);
     }
+  };
+
+  // Update canvas whenever any dependency changes
+  useEffect(() => {
+    updateCanvas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [originalImage, foregroundImage, text, textSize, textColor]);
+
+  const downloadComposition = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Convert to blob and download
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((blob) => resolve(blob!), "image/png")
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${uuidv4()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="border rounded-lg p-4 flex flex-col gap-8">
@@ -124,45 +138,11 @@ export function Editor({ originalImage, foregroundImage }: Props) {
           </div>
         </div>
 
-        {/* Layered composition preview */}
+        {/* Canvas preview */}
         <div className="relative aspect-square">
-          {/* Background layer */}
-          <Image
-            src={originalImage}
-            alt="Background Layer"
-            fill
-            className="object-contain z-0"
-          />
-
-          {/* Text layer */}
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div
-              style={{
-                fontSize: `${textSize}px`,
-                color: textColor,
-                textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-                fontWeight: "bold",
-                textAlign: "center",
-                maxWidth: "90%",
-                wordBreak: "break-word",
-              }}
-            >
-              {text}
-            </div>
-          </div>
-
-          {/* Foreground layer */}
-          <Image
-            src={foregroundImage}
-            alt="Foreground Layer"
-            fill
-            className="object-contain z-20"
-          />
+          <canvas ref={canvasRef} className="w-full h-full object-contain" />
         </div>
       </div>
-
-      {/* Hidden canvas for composition */}
-      <canvas ref={canvasRef} style={{ display: "none" }} />
     </div>
   );
 }
