@@ -124,6 +124,16 @@ export default function UploadPage() {
             Andre Treib
           </a>
         </span>
+        <span className="text-sm text-gray-500">
+          Open-source, baby.{" "}
+          <a
+            href="https://github.com/atreib/thebackgroundtext"
+            target="_blank"
+            className="underline"
+          >
+            Check it out on GitHub
+          </a>
+        </span>
         <ProductHuntBadge />
       </footer>
     </div>
