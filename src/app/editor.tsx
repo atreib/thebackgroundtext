@@ -30,6 +30,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
   const [shadowOffsetY, setShadowOffsetY] = useState(4);
   const [shadowColor, setShadowColor] = useState("#000000");
   const [shadowOpacity, setShadowOpacity] = useState(50);
+  const [rotation, setRotation] = useState(0); // Add rotation state
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const updateCanvas = async () => {
@@ -89,6 +90,12 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       const x = (canvas.width * positionX) / 100;
       const y = (canvas.height * positionY) / 100;
 
+      // Apply rotation
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.translate(-x, -y);
+
       // Handle multiline text
       const lines = text.split("\n");
       const lineHeight = (textSize * canvas.width) / 512;
@@ -96,6 +103,8 @@ export function Editor({ originalImage, foregroundImage }: Props) {
         const yOffset = (index - (lines.length - 1) / 2) * lineHeight;
         ctx.fillText(line, x, y + yOffset, canvas.width * 0.9);
       });
+
+      ctx.restore(); // Restore canvas state after rotation
 
       // Load and draw foreground
       ctx.shadowBlur = 0;
@@ -126,6 +135,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
     shadowOffsetY,
     shadowColor,
     shadowOpacity,
+    rotation, // Add rotation to dependencies
   ]);
 
   const downloadComposition = async () => {
@@ -249,6 +259,24 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                 onChange={(e) => setPositionY(Number(e.target.value))}
                 className="w-full p-2 border rounded"
               />
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <h3 className="font-medium mb-2">Text Rotation</h3>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Rotation (degrees)
+              </label>
+              <input
+                type="range"
+                min="-180"
+                max="180"
+                value={rotation}
+                onChange={(e) => setRotation(Number(e.target.value))}
+                className="w-full p-2 border rounded"
+              />
+              <div className="text-sm text-gray-600 mt-1">{rotation}°</div>
             </div>
           </div>
 
