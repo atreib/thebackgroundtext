@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import { extractForegroundURL } from "@/libs/bg-remover/index.client";
 import { Editor } from "./editor";
+import { ProductHuntBadge } from "./product-hunt-badge";
 
 export default function UploadPage() {
   const [state, setState] = useState<"idle" | "loading">("idle");
@@ -112,11 +113,18 @@ export default function UploadPage() {
           </div>
         </div>
       </div>
-      <footer className="text-center text-sm text-gray-500 mt-8 py-8">
-        Built with ❤️ by{" "}
-        <a href="https://andretreib.com" target="_blank" className="underline">
-          Andre Treib
-        </a>
+      <footer className="max-w-6xl mx-auto mt-8 py-8 flex items-center justify-between">
+        <span className="text-sm text-gray-500">
+          Built with ❤️ by{" "}
+          <a
+            href="https://andretreib.com"
+            target="_blank"
+            className="underline"
+          >
+            Andre Treib
+          </a>
+        </span>
+        <ProductHuntBadge />
       </footer>
     </div>
   );

@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "api.producthunt.com",
+        pathname: "/widgets/embed-image/**",
+      },
+    ],
+  },
   headers: async () => [
     {
       source: "/:path*",
@@ -11,7 +20,11 @@ const nextConfig: NextConfig = {
         },
         {
           key: "Cross-Origin-Embedder-Policy",
-          value: "require-corp",
+          value: "credentialless",
+        },
+        {
+          key: "Cross-Origin-Resource-Policy",
+          value: "cross-origin",
         },
       ],
     },
