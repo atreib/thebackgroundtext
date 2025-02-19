@@ -98,6 +98,8 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       });
 
       // Load and draw foreground
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
       const fgImage = await loadImage(foregroundImage);
       ctx.drawImage(fgImage, 0, 0, canvas.width, canvas.height);
     } catch (error) {
@@ -187,7 +189,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
             <input
               type="range"
               min="32"
-              max="128"
+              max="256"
               value={textSize}
               onChange={(e) => setTextSize(Number(e.target.value))}
               className="w-full"
