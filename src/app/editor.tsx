@@ -213,7 +213,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                 Text Opacity (%)
               </label>
               <input
-                type="number"
+                type="range"
                 min="0"
                 max="100"
                 value={textOpacity}
@@ -229,7 +229,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                 Position X (%)
               </label>
               <input
-                type="number"
+                type="range"
                 min="0"
                 max="100"
                 value={positionX}
@@ -242,7 +242,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                 Position Y (%)
               </label>
               <input
-                type="number"
+                type="range"
                 min="0"
                 max="100"
                 value={positionY}
@@ -271,7 +271,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                   Shadow Opacity (%)
                 </label>
                 <input
-                  type="number"
+                  type="range"
                   min="0"
                   max="100"
                   value={shadowOpacity}
@@ -284,7 +284,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                   Shadow Blur
                 </label>
                 <input
-                  type="number"
+                  type="range"
                   min="0"
                   max="50"
                   value={shadowBlur}
@@ -297,7 +297,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                   Shadow X Offset
                 </label>
                 <input
-                  type="number"
+                  type="range"
                   min="-50"
                   max="50"
                   value={shadowOffsetX}
@@ -310,7 +310,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                   Shadow Y Offset
                 </label>
                 <input
-                  type="number"
+                  type="range"
                   min="-50"
                   max="50"
                   value={shadowOffsetY}
