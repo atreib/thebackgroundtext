@@ -95,8 +95,9 @@ export default function UploadPage() {
                 <div className="relative aspect-square bg-gray-100">
                   {state === "loading" ? (
                     <div className="w-full h-full animate-pulse flex items-center justify-center">
-                      <span className="text-gray-500 animate-pulse">
-                        Extracting...
+                      <span className="text-gray-500 animate-pulse text-center">
+                        <p>Extracting...</p>
+                        <p>This may take up to a minute</p>
                       </span>
                     </div>
                   ) : (
@@ -113,7 +114,7 @@ export default function UploadPage() {
           </div>
         </div>
       </div>
-      <footer className="max-w-6xl mx-auto mt-8 py-8 flex items-center justify-between">
+      <footer className="max-w-6xl mx-auto mt-8 py-8 flex flex-col-reverse lg:flex-row items-center justify-between gap-4 lg:gap-0">
         <span className="text-sm text-gray-500">
           Built with ❤️ by{" "}
           <a

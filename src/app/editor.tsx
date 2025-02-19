@@ -160,7 +160,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-4 max-h-[500px] overflow-y-auto border-b shadow p-8 bg-gray-50">
+        <div className="space-y-4 max-h-[40vh] lg:max-h-[500px] overflow-y-auto border-b shadow p-8 bg-gray-50 order-2 lg:order-1">
           <div>
             <label className="block text-sm font-medium mb-1">Text</label>
             <textarea
@@ -198,7 +198,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               <span className="text-sm text-gray-600 w-12">{textSize}px</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">
                 Text Color
@@ -224,7 +224,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">
                 Position X (%)
@@ -271,7 +271,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
           </div>
           <div className="border-t pt-4">
             <h3 className="font-medium mb-2">Shadow Settings</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Shadow Color
@@ -378,7 +378,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Horizontal Scale
@@ -421,7 +421,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
         </div>
 
         {/* Canvas preview */}
-        <div className="relative aspect-square">
+        <div className="relative aspect-square order-1 lg:order-2">
           <canvas ref={canvasRef} className="w-full h-full object-contain" />
         </div>
       </div>
