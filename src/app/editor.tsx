@@ -31,6 +31,10 @@ export function Editor({ originalImage, foregroundImage }: Props) {
   const [shadowColor, setShadowColor] = useState("#000000");
   const [shadowOpacity, setShadowOpacity] = useState(50);
   const [rotation, setRotation] = useState(0); // Add rotation state
+  const [letterSpacing, setLetterSpacing] = useState(0); // New: letter spacing in pixels
+  const [wordSpacing, setWordSpacing] = useState(0); // New: word spacing in pixels
+  const [scaleX, setScaleX] = useState(100); // New: horizontal scale percentage
+  const [scaleY, setScaleY] = useState(100); // New: vertical scale percentage
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const updateCanvas = async () => {
@@ -65,12 +69,13 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
       // Draw text with all customizations
-      ctx.font = `bold ${(textSize * canvas.width) / 512}px ${fontFamily}`;
+      const scaledTextSize = (textSize * canvas.width) / 512;
+      ctx.font = `bold ${scaledTextSize}px ${fontFamily}`;
       const color =
         textColor +
         Math.round(textOpacity * 2.55)
           .toString(16)
-          .padStart(2, "0"); // Convert opacity to hex
+          .padStart(2, "0");
       ctx.fillStyle = color;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -86,25 +91,53 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       ctx.shadowOffsetX = shadowOffsetX;
       ctx.shadowOffsetY = shadowOffsetY;
 
-      // Calculate text position based on percentages
+      // Apply transformations
       const x = (canvas.width * positionX) / 100;
       const y = (canvas.height * positionY) / 100;
 
-      // Apply rotation
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate((rotation * Math.PI) / 180);
+      ctx.scale(scaleX / 100, scaleY / 100);
       ctx.translate(-x, -y);
 
-      // Handle multiline text
+      // Handle multiline text with letter spacing and word spacing
       const lines = text.split("\n");
-      const lineHeight = (textSize * canvas.width) / 512;
+      const computedLineHeight = (scaledTextSize * 1) / 100;
+
       lines.forEach((line, index) => {
-        const yOffset = (index - (lines.length - 1) / 2) * lineHeight;
-        ctx.fillText(line, x, y + yOffset, canvas.width * 0.9);
+        const words = line.split(" ");
+        let currentX = x;
+        const yOffset = (index - (lines.length - 1) / 2) * computedLineHeight;
+
+        // Apply word spacing
+        const spaceWidth = ctx.measureText(" ").width + wordSpacing;
+        let totalWidth = 0;
+
+        words.forEach((word, wordIndex) => {
+          const chars = word.split("");
+          let wordWidth = 0;
+
+          // Apply letter spacing within each word
+          chars.forEach((char) => {
+            const charWidth = ctx.measureText(char).width;
+            ctx.fillText(char, currentX + wordWidth, y + yOffset);
+            wordWidth += charWidth + letterSpacing;
+          });
+
+          currentX += wordWidth;
+          if (wordIndex < words.length - 1) {
+            currentX += spaceWidth;
+          }
+          totalWidth = currentX - x;
+        });
+
+        // Center the line by adjusting x position
+        const adjustment = totalWidth / 2;
+        ctx.translate(-adjustment, 0);
       });
 
-      ctx.restore(); // Restore canvas state after rotation
+      ctx.restore();
 
       // Load and draw foreground
       ctx.shadowBlur = 0;
@@ -135,7 +168,11 @@ export function Editor({ originalImage, foregroundImage }: Props) {
     shadowOffsetY,
     shadowColor,
     shadowOpacity,
-    rotation, // Add rotation to dependencies
+    rotation,
+    letterSpacing,
+    wordSpacing,
+    scaleX,
+    scaleY,
   ]);
 
   const downloadComposition = async () => {
@@ -168,7 +205,7 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[500px] overflow-y-auto border-b shadow p-8 bg-gray-50">
           <div>
             <label className="block text-sm font-medium mb-1">Text</label>
             <textarea
@@ -178,7 +215,6 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               placeholder="Enter your text here..."
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium mb-1">Font</label>
             <select
@@ -193,19 +229,20 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               ))}
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium mb-1">Text Size</label>
-            <input
-              type="range"
-              min="32"
-              max="256"
-              value={textSize}
-              onChange={(e) => setTextSize(Number(e.target.value))}
-              className="w-full"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="32"
+                max="256"
+                value={textSize}
+                onChange={(e) => setTextSize(Number(e.target.value))}
+                className="flex-1"
+              />
+              <span className="text-sm text-gray-600 w-12">{textSize}px</span>
+            </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -232,7 +269,6 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               />
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -261,7 +297,6 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               />
             </div>
           </div>
-
           <div className="border-t pt-4">
             <h3 className="font-medium mb-2">Text Rotation</h3>
             <div>
@@ -279,7 +314,6 @@ export function Editor({ originalImage, foregroundImage }: Props) {
               <div className="text-sm text-gray-600 mt-1">{rotation}°</div>
             </div>
           </div>
-
           <div className="border-t pt-4">
             <h3 className="font-medium mb-2">Shadow Settings</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -345,6 +379,87 @@ export function Editor({ originalImage, foregroundImage }: Props) {
                   onChange={(e) => setShadowOffsetY(Number(e.target.value))}
                   className="w-full p-2 border rounded"
                 />
+              </div>
+            </div>
+          </div>
+          <div className="border-t pt-4">
+            <h3 className="font-medium mb-2">Advanced Text Settings</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Letter Spacing
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="-20"
+                    max="100"
+                    value={letterSpacing}
+                    onChange={(e) => setLetterSpacing(Number(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-gray-600 w-12">
+                    {letterSpacing}px
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Word Spacing
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={wordSpacing}
+                    onChange={(e) => setWordSpacing(Number(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-gray-600 w-12">
+                    {wordSpacing}px
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Horizontal Scale
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="300"
+                      value={scaleX}
+                      onChange={(e) => setScaleX(Number(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-600 w-12">
+                      {scaleX}%
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Vertical Scale
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="300"
+                      value={scaleY}
+                      onChange={(e) => setScaleY(Number(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-600 w-12">
+                      {scaleY}%
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
