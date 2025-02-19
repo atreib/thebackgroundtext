@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { renderText, resetShadow, type TextStyle } from "./utils/text-utils";
 
 type Props = {
   originalImage: string;
@@ -68,80 +69,34 @@ export function Editor({ originalImage, foregroundImage }: Props) {
       // Draw background
       ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
-      // Draw text with all customizations
-      const scaledTextSize = (textSize * canvas.width) / 512;
-      ctx.font = `bold ${scaledTextSize}px ${fontFamily}`;
-      const color =
-        textColor +
-        Math.round(textOpacity * 2.55)
-          .toString(16)
-          .padStart(2, "0");
-      ctx.fillStyle = color;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      // Create text style object
+      const textStyle: TextStyle = {
+        text,
+        textSize,
+        textColor,
+        textOpacity,
+        fontFamily,
+        positionX,
+        positionY,
+        rotation,
+        letterSpacing,
+        wordSpacing,
+        scaleX,
+        scaleY,
+        shadowBlur,
+        shadowOffsetX,
+        shadowOffsetY,
+        shadowColor,
+        shadowOpacity,
+      };
 
-      // Shadow settings
-      const shadowColorHex =
-        shadowColor +
-        Math.round(shadowOpacity * 2.55)
-          .toString(16)
-          .padStart(2, "0");
-      ctx.shadowColor = shadowColorHex;
-      ctx.shadowBlur = shadowBlur;
-      ctx.shadowOffsetX = shadowOffsetX;
-      ctx.shadowOffsetY = shadowOffsetY;
+      // Render text with all settings
+      renderText(ctx, textStyle, canvas.width, canvas.height);
 
-      // Apply transformations
-      const x = (canvas.width * positionX) / 100;
-      const y = (canvas.height * positionY) / 100;
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate((rotation * Math.PI) / 180);
-      ctx.scale(scaleX / 100, scaleY / 100);
-      ctx.translate(-x, -y);
-
-      // Handle multiline text with letter spacing and word spacing
-      const lines = text.split("\n");
-      const computedLineHeight = (scaledTextSize * 1) / 100;
-
-      lines.forEach((line, index) => {
-        const words = line.split(" ");
-        let currentX = x;
-        const yOffset = (index - (lines.length - 1) / 2) * computedLineHeight;
-
-        // Apply word spacing
-        const spaceWidth = ctx.measureText(" ").width + wordSpacing;
-        let totalWidth = 0;
-
-        words.forEach((word, wordIndex) => {
-          const chars = word.split("");
-          let wordWidth = 0;
-
-          // Apply letter spacing within each word
-          chars.forEach((char) => {
-            const charWidth = ctx.measureText(char).width;
-            ctx.fillText(char, currentX + wordWidth, y + yOffset);
-            wordWidth += charWidth + letterSpacing;
-          });
-
-          currentX += wordWidth;
-          if (wordIndex < words.length - 1) {
-            currentX += spaceWidth;
-          }
-          totalWidth = currentX - x;
-        });
-
-        // Center the line by adjusting x position
-        const adjustment = totalWidth / 2;
-        ctx.translate(-adjustment, 0);
-      });
-
-      ctx.restore();
+      // Reset shadow for foreground image
+      resetShadow(ctx);
 
       // Load and draw foreground
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = "transparent";
       const fgImage = await loadImage(foregroundImage);
       ctx.drawImage(fgImage, 0, 0, canvas.width, canvas.height);
     } catch (error) {
